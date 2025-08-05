@@ -16,7 +16,6 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
-
 vim.o.number = true
 vim.o.relativenumber = true
 vim.o.signcolumn = 'yes'
@@ -42,7 +41,11 @@ require("lazy").setup({
     event = { "BufReadPre", "BufNewFile" },
   },
 
-  -- VSCode theme
+  {
+    "github/copilot.vim"
+  },
+
+  -- theme
   {
     "folke/tokyonight.nvim",
     lazy = false,
