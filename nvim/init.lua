@@ -7,7 +7,7 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
   if vim.v.shell_error ~= 0 then
     vim.api.nvim_echo({
       { "Failed to clone lazy.nvim:\n", "ErrorMsg" },
-      { out, "WarningMsg" },
+      { out,                            "WarningMsg" },
       { "\nPress any key to exit..." },
     }, true, {})
     vim.fn.getchar()
@@ -21,6 +21,9 @@ vim.o.relativenumber = true
 vim.o.signcolumn = 'yes'
 vim.o.wrap = false
 vim.o.tabstop = 2
+vim.o.shiftwidth = 2
+vim.o.expandtab = true
+vim.o.smartindent = true
 vim.o.swapfile = false
 vim.g.mapleader = ' '
 vim.o.winborder = 'rounded'
@@ -33,9 +36,9 @@ vim.keymap.set('n', '<leader>w', ':write<CR>')
 vim.keymap.set('n', '<leader>q', ':quit<CR>')
 vim.keymap.set('n', '<leader>t', ':e /tmp/todo.md<CR>')
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
+vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 require("lazy").setup({
-  -- Tabs and spaces
   {
     "tpope/vim-sleuth",
     event = { "BufReadPre", "BufNewFile" },
@@ -43,6 +46,10 @@ require("lazy").setup({
 
   {
     "github/copilot.vim"
+  },
+
+  {
+    "lewis6991/gitsigns.nvim"
   },
 
   -- theme
@@ -53,6 +60,14 @@ require("lazy").setup({
     config = function()
       vim.cmd('colorscheme tokyonight')
       vim.cmd(':hi statusline guibg=NONE')
+      vim.cmd [[
+	  hi Normal guibg=NONE ctermbg=NONE
+	  hi NormalNC guibg=NONE ctermbg=NONE
+	  hi SignColumn guibg=NONE ctermbg=NONE
+	  hi VertSplit guibg=NONE ctermbg=NONE
+	  hi StatusLine guibg=NONE ctermbg=NONE
+	  hi TabLineFill guibg=NONE ctermbg=NONE
+      ]]
     end,
   },
 
@@ -61,87 +76,33 @@ require("lazy").setup({
     "stevearc/oil.nvim",
     lazy = false,
     config = function()
-      require('oil').setup()
+      require("oil").setup({
+        win_options = {
+          signcolumn = "yes:2",
+        },
+      })
       vim.keymap.set('n', '-', ':Oil<CR>')
     end,
   },
 
-  -- LSP installer
   {
-    "williamboman/mason.nvim",
-    cmd = "Mason",
+    "benomahony/oil-git.nvim",
+    dependencies = { "stevearc/oil.nvim" },
+  },
+
+  -- Coc.nvim
+  {
+    "neoclide/coc.nvim",
+    branch = "release",
     config = function()
-      require('mason').setup()
-    end,
-  },
-
-  -- Mason LSP config bridge
-  {
-    "williamboman/mason-lspconfig.nvim",
-    dependencies = { "williamboman/mason.nvim" },
-    config = function()
-      require("mason-lspconfig").setup({
-        automatic_installation = true,
-      })
-    end,
-  },
-
-  -- Snippet collection
-  {
-    "rafamadriz/friendly-snippets",
-    lazy = true,
-  },
-
-  -- Modern completion engine
-  {
-    "saghen/blink.cmp",
-    dependencies = "rafamadriz/friendly-snippets",
-    version = "*",
-    event = { "InsertEnter", "CmdlineEnter" },
-    opts = {
-      keymap = { preset = 'default' },
-      appearance = {
-        use_nvim_cmp_as_default = true,
-        nerd_font_variant = 'mono'
-      },
-      sources = {
-        default = { 'lsp', 'path', 'snippets', 'buffer' },
-      },
-      completion = {
-        accept = {
-          auto_brackets = {
-            enabled = true,
-          },
-        },
-        menu = {
-          draw = {
-            treesitter = { "lsp" },
-          },
-        },
-        documentation = {
-          auto_show = true,
-          auto_show_delay_ms = 200,
-        },
-      },
-      signature = { enabled = true },
-    },
-    opts_extend = { "sources.default" }
-  },
-
-  -- LSP configurations
-  {
-    "neovim/nvim-lspconfig",
-    event = { "BufReadPre", "BufNewFile" },
-    dependencies = { "williamboman/mason-lspconfig.nvim" },
-    config = function()
-      -- LSP completion setup
-      vim.api.nvim_create_autocmd('LspAttach', {
-        callback = function(ev)
-          -- LSP keymaps
-          vim.keymap.set('n', '<leader>lf', vim.lsp.buf.format, { buffer = ev.buf })
-        end,
-      })
-    end,
+      -- Example keymaps (can be extended)
+      vim.keymap.set('n', 'gd', '<Plug>(coc-definition)', { silent = true })
+      vim.keymap.set('n', 'gy', '<Plug>(coc-type-definition)', { silent = true })
+      vim.keymap.set('n', 'gi', '<Plug>(coc-implementation)', { silent = true })
+      vim.keymap.set('n', 'gr', '<Plug>(coc-references)', { silent = true })
+      vim.keymap.set('n', '<leader>rn', '<Plug>(coc-rename)', { silent = true })
+      vim.keymap.set('n', '<leader>lf', '<Plug>(coc-format)', { silent = true })
+    end
   },
 
   -- Treesitter
@@ -176,7 +137,7 @@ require("lazy").setup({
     end,
   },
 
-  -- Plenary (dependency for elescope)
+  -- Plenary (dependency for telescope)
   {
     "nvim-lua/plenary.nvim",
     lazy = true,
@@ -188,8 +149,19 @@ require("lazy").setup({
     cmd = "Telescope",
     keys = {
       { "<leader>sf", "<cmd>Telescope find_files<cr>", desc = "Find Files" },
-      { "<leader>sg", "<cmd>Telescope live_grep<cr>", desc = "Live Grep" },
-      { "<leader>sb", "<cmd>Telescope buffers<cr>", desc = "Buffers" },
+      { "<leader>sg", "<cmd>Telescope live_grep<cr>",  desc = "Live Grep" },
+      { "<leader>sb", "<cmd>Telescope buffers<cr>",    desc = "Buffers" },
     },
   },
+
+  {
+    "cursor-agent.nvim",
+    dev = true,
+    config = function()
+      vim.keymap.set("n", "<leader>ca", ":CursorAgent<CR>", { desc = "Cursor Agent: Toggle terminal" })
+      vim.keymap.set("v", "<leader>ca", ":CursorAgentSelection<CR>", { desc = "Cursor Agent: Send selection" })
+      vim.keymap.set("n", "<leader>cA", ":CursorAgentBuffer<CR>", { desc = "Cursor Agent: Send buffer" })
+    end,
+  },
 })
+
